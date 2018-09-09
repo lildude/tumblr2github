@@ -1,0 +1,19 @@
+{
+	"comment": "",
+	"heroku": {
+		"goVersion": "go1.10",
+		"install": [
+			"."
+		]
+	},
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "WYgvNuGj5g1sej4dJWBHF5bSKGE=",
+			"path": "github.com/kelseyhightower/envconfig",
+			"revision": "dd1402a4d99de9ac2f396cd6fcb957bc2c695ec1",
+			"revisionTime": "2018-05-17T19:45:57Z"
+		}
+	],
+	"rootPath": "github.com/lildude/tumblr-to-github"
+}
