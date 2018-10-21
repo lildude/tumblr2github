@@ -30,6 +30,15 @@ func TestGetRepo(t *testing.T) {
 			}
 		})
 	}
+
+	s.GithubRepo = "lildude.github.io"
+	t.Run("settings override", func(t *testing.T) {
+		//t.Parallel()
+		repo := getRepo([]string{"foo", "run"})
+		if repo != s.GithubRepo {
+			t.Errorf("%v failed, got: %s, want: %s.", "settings override", repo, s.GithubRepo)
+}
+	})
 }
 
 func TestCreateSlug(t *testing.T) {
