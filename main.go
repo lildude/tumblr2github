@@ -209,7 +209,7 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 }
 
 func createSlug(t *time.Time) string {
-	return fmt.Sprintf("%d-%d-%d-%d", t.Year(), t.Month(), t.Day(), t.Unix()%(24*60*60))
+	return fmt.Sprintf("%s-%d", t.Format("2006-01-02"), t.Unix()%(24*60*60))
 }
 
 func getRepo(tags []string) string {
