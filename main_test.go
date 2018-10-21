@@ -37,7 +37,7 @@ func TestGetRepo(t *testing.T) {
 		repo := getRepo([]string{"foo", "run"})
 		if repo != s.GithubRepo {
 			t.Errorf("%v failed, got: %s, want: %s.", "settings override", repo, s.GithubRepo)
-}
+		}
 	})
 }
 
@@ -60,6 +60,42 @@ func TestCreateSlug(t *testing.T) {
 			slug := createSlug(&time)
 			if slug != tc.expected {
 				t.Errorf("%v failed, got: %s, want: %s.", tc.name, slug, tc.expected)
+			}
+		})
+	}
+}
+
+func TestFormatPost(t *testing.T) {
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		date     string
+		content  string
+		expected string
+	}{
+		{
+			name:     "simple text",
+			date:     "2010-01-04 01:02:03 UTC",
+			content:  "This is simple text",
+			expected: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 2010-01-04 01:02:03 +0000 UTC\n---\n\nThis is simple text\n",
+		},
+		{
+			name:     "markdown text",
+			date:     "1979-09-30 15:16:17 BST",
+			content:  "This is **markdown** text",
+			expected: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			timeLayout := "2006-01-02 15:04:05 MST"
+			time, _ := time.Parse(timeLayout, tc.date)
+			post, _ := formatPost(tc.content, &time, []string{"foo", "run"})
+			if post != tc.expected {
+				t.Errorf("%v failed, got: %s, want: %s.", tc.name, post, tc.expected)
 			}
 		})
 	}
