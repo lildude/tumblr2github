@@ -59,6 +59,8 @@ type blogPost struct {
 }
 
 var s Settings
+var client *github.Client
+var ctx = context.Background()
 
 func main() {
 	err := envconfig.Process("tumblr", &s)
@@ -163,10 +165,16 @@ func parseTextContent(p *tumblr.TextPost) string {
 }
 
 func postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
-	ctx := context.Background()
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
 	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
+	client = github.NewClient(tc)
+
+	filename := fmt.Sprintf("%s.md", createSlug(postDate))
+
+	// Bail early if the post already exists.
+	if repoHasPost(filename, repository) {
+		return "INFO: Post already exists. Nothing to do.", nil
+	}
 
 	ref, _, err := client.Git.GetRef(ctx, s.GithubUser, repository, "refs/heads/master")
 	if err != nil {
@@ -175,7 +183,6 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 
 	// Create a tree with what to commit.
 	entries := []github.TreeEntry{}
-	filename := fmt.Sprintf("%s.md", createSlug(postDate))
 	entries = append(entries, github.TreeEntry{Path: github.String("_posts/" + filename), Type: github.String("blob"), Content: github.String(string(content)), Mode: github.String("100644")})
 	tree, _, err := client.Git.CreateTree(ctx, s.GithubUser, repository, *ref.Object.SHA, entries)
 
@@ -206,6 +213,16 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 	}
 
 	return fmt.Sprintf("INFO: New post created: %s", filename), nil
+}
+
+func repoHasPost(filename string, repo string) bool {
+	query := fmt.Sprintf("filename:%s repo:%s/%s path:_posts", filename, s.GithubUser, repo)
+	opts := &github.SearchOptions{Sort: "forks", Order: "desc"}
+	res, _, _ := client.Search.Code(ctx, query, opts)
+	if res.GetTotal() > 0 {
+		return true
+	}
+	return false
 }
 
 func createSlug(t *time.Time) string {
