@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func TestGetRepo(t *testing.T) {
@@ -29,5 +30,28 @@ func TestGetRepo(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestCreateSlug(t *testing.T) {
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		expected string
+	}{
+		{name: "2010-01-04 01:02:03 UTC", expected: "2010-01-04-3723"},
+		{name: "1979-09-30 15:16:17 BST", expected: "1979-09-30-51377"},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			timeLayout := "2006-01-02 15:04:05 MST"
+			time, _ := time.Parse(timeLayout, tc.name)
+			slug := createSlug(&time)
+			if slug != tc.expected {
+				t.Errorf("%v failed, got: %s, want: %s.", tc.name, slug, tc.expected)
+			}
+		})
+	}
 }
