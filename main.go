@@ -123,12 +123,12 @@ func formatPost(content string, time *time.Time, tags []string) (res string, err
 	c := blogPost{time.String(), tags, content}
 	fmtTmpl := `---
 layout: post
-{{if .Tags}}
+{{- if .Tags }}
 tags:
-{{range .Tags}}
+{{- range .Tags }}
 - {{.}}
-{{end}}
-{{end}}
+{{- end }}
+{{- end }}
 date: {{.Date}}
 ---
 
