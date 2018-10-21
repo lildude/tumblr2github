@@ -24,7 +24,7 @@ import (
 type Settings struct {
 	Port              string `required:"true" envconfig:"PORT"`
 	GithubToken       string `required:"true" split_words:"true"`
-	GithubRepo        string `required:"true" split_words:"true"`
+	GithubRepo        string `required:"false" split_words:"true"`
 	GithubUser        string `required:"true" split_words:"true"`
 	GithubAuthorName  string `required:"true" split_words:"true"`
 	GithubAuthorEmail string `required:"true" split_words:"true"`
@@ -105,7 +105,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			res, err := postToGithub(cont, &t)
+			res, err := postToGithub(cont, &t, getRepo(pt.Tags))
 			if err != nil {
 				log.Fatal(err.Error())
 			}
@@ -114,9 +114,6 @@ func main() {
 			continue
 		}
 	}
-
-	//fmt.Printf("%v\n", allPosts[0])
-
 }
 
 func formatPost(content string, time *time.Time, tags []string) (res string, err error) {
@@ -165,17 +162,13 @@ func parseTextContent(p *tumblr.TextPost) string {
 	return content
 }
 
-func postToGithub(content string, postDate *time.Time) (res string, err error) {
+func postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
 	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: s.GithubToken},
-	)
+	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
 	tc := oauth2.NewClient(ctx, ts)
-
 	client := github.NewClient(tc)
 
-	branch := "refs/heads/master"
-	ref, _, err := client.Git.GetRef(ctx, s.GithubUser, s.GithubRepo, branch)
+	ref, _, err := client.Git.GetRef(ctx, s.GithubUser, repository, "refs/heads/master")
 	if err != nil {
 		return "", err
 	}
@@ -184,11 +177,11 @@ func postToGithub(content string, postDate *time.Time) (res string, err error) {
 	entries := []github.TreeEntry{}
 	filename := fmt.Sprintf("%s.md", createSlug(postDate))
 	entries = append(entries, github.TreeEntry{Path: github.String("_posts/" + filename), Type: github.String("blob"), Content: github.String(string(content)), Mode: github.String("100644")})
-	tree, _, err := client.Git.CreateTree(ctx, s.GithubUser, s.GithubRepo, *ref.Object.SHA, entries)
+	tree, _, err := client.Git.CreateTree(ctx, s.GithubUser, repository, *ref.Object.SHA, entries)
 
 	// createCommit creates the commit in the given reference using the given tree.
 	// Get the parent commit to attach the commit to.
-	parent, _, err := client.Repositories.GetCommit(ctx, s.GithubUser, s.GithubRepo, *ref.Object.SHA)
+	parent, _, err := client.Repositories.GetCommit(ctx, s.GithubUser, repository, *ref.Object.SHA)
 	if err != nil {
 		return "", err
 	}
@@ -200,14 +193,14 @@ func postToGithub(content string, postDate *time.Time) (res string, err error) {
 	date := time.Now()
 	author := &github.CommitAuthor{Date: &date, Name: github.String(s.GithubAuthorName), Email: github.String(s.GithubAuthorEmail)}
 	commit := &github.Commit{Author: author, Message: github.String("New note: " + filename), Tree: tree, Parents: []github.Commit{*parent.Commit}}
-	newCommit, _, err := client.Git.CreateCommit(ctx, s.GithubUser, s.GithubRepo, commit)
+	newCommit, _, err := client.Git.CreateCommit(ctx, s.GithubUser, repository, commit)
 	if err != nil {
 		return "", err
 	}
 
 	// Attach the commit to the master branch.
 	ref.Object.SHA = newCommit.SHA
-	_, _, err = client.Git.UpdateRef(ctx, s.GithubUser, s.GithubRepo, ref, false)
+	_, _, err = client.Git.UpdateRef(ctx, s.GithubUser, repository, ref, false)
 	if err != nil {
 		return "", err
 	}
@@ -217,4 +210,18 @@ func postToGithub(content string, postDate *time.Time) (res string, err error) {
 
 func createSlug(t *time.Time) string {
 	return fmt.Sprintf("%d-%d-%d-%d", t.Year(), t.Month(), t.Day(), t.Unix()%(24*60*60))
+}
+
+func getRepo(tags []string) string {
+	if s.GithubRepo != "" {
+		return s.GithubRepo
+	}
+	for _, n := range tags {
+		if n == "run" {
+			return "gonefora.run"
+		} else if n == "tech" {
+			return "lildude.co.uk"
+		}
+	}
+	return "colinseymour.co.uk"
 }
