@@ -100,3 +100,76 @@ func TestFormatPost(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTextContent(t *testing.T) {
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		content  string
+		format   string
+		expected string
+	}{
+		{
+			name:     "text without html or markdown as html",
+			content:  "This is simple text",
+			format:   "html",
+			expected: "This is simple text",
+		},
+		{
+			name:     "text without html or markdown as markdown",
+			content:  "This is simple text",
+			format:   "markdown",
+			expected: "This is simple text",
+		},
+		{
+			name:     "text with html as html",
+			content:  "This is <b>simple</b> text",
+			format:   "html",
+			expected: "This is **simple** text",
+		},
+		{
+			name:     "text with html as markdown",
+			content:  "This is <b>simple</b> text",
+			format:   "markdown",
+			expected: "This is <b>simple</b> text",
+		},
+		{
+			name:     "text with markdown as html",
+			content:  "This is **simple** text",
+			format:   "html",
+			expected: "This is **simple** text",
+		},
+		{
+			name:     "text with markdown as markdown",
+			content:  "This is **simple** text",
+			format:   "html",
+			expected: "This is **simple** text",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			c := parseTextContent(tc.content, tc.format)
+			if c != tc.expected {
+				t.Errorf("%v failed, got: %s, want: %s.", tc.name, c, tc.expected)
+			}
+		})
+	}
+}
+
+/*
+func TestFormatPostFailure(t *testing.T) {
+
+}
+
+func TestPostToGithub(t *testing.T) {
+
+}
+
+func TestRepoHasPost(t *testing.T) {
+
+}
+
+*/
