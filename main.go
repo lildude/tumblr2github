@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"text/template"
@@ -162,10 +163,17 @@ func parseTextContent(content, format string) string {
 	return content
 }
 
+func newGitHubClient(httpClient *http.Client) *github.Client {
+	tc := httpClient
+	if httpClient == nil {
+		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
+		tc = oauth2.NewClient(ctx, ts)
+	}
+	return github.NewClient(tc)
+}
+
 func postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
-	tc := oauth2.NewClient(ctx, ts)
-	client = github.NewClient(tc)
+	client := newGitHubClient(nil)
 
 	filename := fmt.Sprintf("%s.md", createSlug(postDate))
 
@@ -214,6 +222,7 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 }
 
 func repoHasPost(filename string, repo string) bool {
+	client := newGitHubClient(nil)
 	query := fmt.Sprintf("filename:%s repo:%s/%s path:_posts", filename, s.GithubUser, repo)
 	opts := &github.SearchOptions{Sort: "forks", Order: "desc"}
 	res, _, _ := client.Search.Code(ctx, query, opts)

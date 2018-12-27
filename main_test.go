@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"io/ioutil"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -142,7 +145,7 @@ func TestParseTextContent(t *testing.T) {
 		{
 			name:     "text with markdown as markdown",
 			content:  "This is **simple** text",
-			format:   "html",
+			format:   "markdown",
 			expected: "This is **simple** text",
 		},
 	}
@@ -159,16 +162,43 @@ func TestParseTextContent(t *testing.T) {
 	}
 }
 
+// RoundTripFunc .
+type RoundTripFunc func(req *http.Request) *http.Response
+
+// RoundTrip .
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+//NewTestClient returns *http.Client with Transport replaced to avoid making real calls
+func NewTestClient(fn RoundTripFunc) *http.Client {
+	return &http.Client{
+		Transport: RoundTripFunc(fn),
+	}
+}
+
+func TestRepoHasPost(t *testing.T) {
+	httpClient := NewTestClient(func(req *http.Request) *http.Response {
+		return &http.Response{
+			StatusCode: 200,
+			// Send response to be tested
+			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
+			// Must be set to non-nil value or it panics
+			Header: make(http.Header),
+		}
+	})
+
+	client := newGitHubClient(httpClient)
+	res := repoHasPost("foo", "lildude/lildude.ghe.io")
+
+}
+
 /*
 func TestFormatPostFailure(t *testing.T) {
 
 }
 
 func TestPostToGithub(t *testing.T) {
-
-}
-
-func TestRepoHasPost(t *testing.T) {
 
 }
 
