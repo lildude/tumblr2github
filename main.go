@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/google/go-github/github"
+	"github.com/google/go-github/v21/github"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/lunny/html2md"
 	"golang.org/x/oauth2"
