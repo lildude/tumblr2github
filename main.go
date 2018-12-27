@@ -59,6 +59,10 @@ type blogPost struct {
 	Content string
 }
 
+type GithubClient struct {
+	Client *http.Client
+}
+
 var s Settings
 var client *github.Client
 var ctx = context.Background()
@@ -83,8 +87,10 @@ func main() {
 	posts, err := tumblr.GetPosts(cl, s.BlogID, params)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		fmt.Printf("%v\n", posts)
 	}
 
+	gc := new(GithubClient)
 	allPosts, _ := posts.All()
 	for _, post := range allPosts {
 		//fmt.Printf("%v\n", post)
@@ -108,7 +114,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			res, err := postToGithub(cont, &t, getRepo(pt.Tags))
+			res, err := gc.postToGithub(cont, &t, getRepo(pt.Tags))
 			if err != nil {
 				log.Fatal(err.Error())
 			}
@@ -163,22 +169,22 @@ func parseTextContent(content, format string) string {
 	return content
 }
 
-func newGitHubClient(httpClient *http.Client) *github.Client {
-	tc := httpClient
-	if httpClient == nil {
+func (gc *GithubClient) newGitHubClient() *github.Client {
+	tc := gc.Client
+	if gc.Client == nil {
 		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
 		tc = oauth2.NewClient(ctx, ts)
 	}
 	return github.NewClient(tc)
 }
 
-func postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
-	client := newGitHubClient(nil)
+func (gc *GithubClient) postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
+	client := gc.newGitHubClient()
 
 	filename := fmt.Sprintf("%s.md", createSlug(postDate))
 
 	// Bail early if the post already exists.
-	if repoHasPost(filename, repository) {
+	if gc.repoHasPost(filename, repository) {
 		return "INFO: Post already exists. Nothing to do.", nil
 	}
 
@@ -221,11 +227,14 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 	return fmt.Sprintf("INFO: New post created: %s", filename), nil
 }
 
-func repoHasPost(filename string, repo string) bool {
-	client := newGitHubClient(nil)
+func (gc *GithubClient) repoHasPost(filename string, repo string) bool {
+	client := gc.newGitHubClient()
 	query := fmt.Sprintf("filename:%s repo:%s/%s path:_posts", filename, s.GithubUser, repo)
 	opts := &github.SearchOptions{Sort: "forks", Order: "desc"}
-	res, _, _ := client.Search.Code(ctx, query, opts)
+	res, _, err := client.Search.Code(ctx, query, opts)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
 	if res.GetTotal() > 0 {
 		return true
 	}

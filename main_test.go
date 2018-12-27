@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -178,19 +178,43 @@ func NewTestClient(fn RoundTripFunc) *http.Client {
 }
 
 func TestRepoHasPost(t *testing.T) {
-	httpClient := NewTestClient(func(req *http.Request) *http.Response {
-		return &http.Response{
-			StatusCode: 200,
-			// Send response to be tested
-			Body: ioutil.NopCloser(bytes.NewBufferString(`OK`)),
-			// Must be set to non-nil value or it panics
-			Header: make(http.Header),
-		}
-	})
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		content  string
+		expected bool
+	}{
+		{
+			name:     "text post does not exist",
+			content:  `{"total_count":0}`,
+			expected: false,
+		},
+		{
+			name:     "text post exists already",
+			content:  `{"total_count":1}`,
+			expected: true,
+		},
+	}
 
-	client := newGitHubClient(httpClient)
-	res := repoHasPost("foo", "lildude/lildude.ghe.io")
-
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			httpClient := NewTestClient(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					// Send response to be tested
+					Body: ioutil.NopCloser(strings.NewReader(tc.content)),
+				}
+			})
+			gc := new(GithubClient)
+			gc.Client = httpClient
+			res := gc.repoHasPost("foo", "lildude.github.io")
+			if res != tc.expected {
+				t.Errorf("%v failed, got: %v, want: %v.", tc.name, res, tc.expected)
+			}
+		})
+	}
 }
 
 /*
