@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -217,13 +218,73 @@ func TestRepoHasPost(t *testing.T) {
 	}
 }
 
+func TestPostToGithub(t *testing.T) {
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		content  string
+		expected string
+	}{
+		{
+			name:     "text post not created as already exists",
+			content:  `{"total_count":1}`,
+			expected: "INFO: Post already exists. Nothing to do.",
+		},
+		{
+			name:     "text post created",
+			content:  `{"total_count":0}`,
+			expected: "INFO: New post created: 2010-01-04-3723.md",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			httpClient := NewTestClient(func(req *http.Request) *http.Response {
+				fmt.Printf("%v\n", req.URL.String())
+				resp := tc.content
+				/* var resp string
+				if strings.Contains(req.URL.String(), "search/code") {
+					resp = tc.content
+				} else if strings.Contains(req.URL.String(), "git/refs/heads/master") {
+					resp = `{
+							"ref": "refs/heads/master",
+							"node_id": "MDM6UmVmMTk0NzQwODc6bWFzdGVy",
+							"url": "https://api.github.com/repos/lildude/lildude.github.io/git/refs/heads/master",
+							"object": {
+									"sha": "8613c69c7075ae1e84a6d06054a402d0f3213c1b",
+							}`
+				} else if strings.Contains(req.URL.String(), "git/trees") {
+					resp = ``
+				} else if strings.Contains(req.URL.String(), "commits/8613c69c7075ae1e84a6d06054a402d0f3213c1") {
+					resp = ``
+				}
+				*/
+				return &http.Response{
+					StatusCode: 200,
+					// Send response to be tested
+					Body: ioutil.NopCloser(strings.NewReader(resp)),
+				}
+			})
+			gc := new(GithubClient)
+			gc.Client = httpClient
+			s.GithubUser = "lildude"
+			timeLayout := "2006-01-02 15:04:05 MST"
+			time, _ := time.Parse(timeLayout, "2010-01-04 01:02:03 UTC")
+			res, _ := gc.postToGithub("foo", &time, "lildude.github.io")
+			if res != tc.expected {
+				t.Errorf("%v failed, got: %v, want: %v.", tc.name, res, tc.expected)
+			}
+		})
+	}
+}
+
 /*
 func TestFormatPostFailure(t *testing.T) {
 
 }
 
-func TestPostToGithub(t *testing.T) {
 
-}
 
 */
