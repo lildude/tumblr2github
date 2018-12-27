@@ -242,30 +242,50 @@ func TestPostToGithub(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			//t.Parallel()
 			httpClient := NewTestClient(func(req *http.Request) *http.Response {
-				fmt.Printf("%v\n", req.URL.String())
-				resp := tc.content
-				/* var resp string
-				if strings.Contains(req.URL.String(), "search/code") {
-					resp = tc.content
-				} else if strings.Contains(req.URL.String(), "git/refs/heads/master") {
-					resp = `{
-							"ref": "refs/heads/master",
-							"node_id": "MDM6UmVmMTk0NzQwODc6bWFzdGVy",
-							"url": "https://api.github.com/repos/lildude/lildude.github.io/git/refs/heads/master",
-							"object": {
-									"sha": "8613c69c7075ae1e84a6d06054a402d0f3213c1b",
-							}`
-				} else if strings.Contains(req.URL.String(), "git/trees") {
-					resp = ``
-				} else if strings.Contains(req.URL.String(), "commits/8613c69c7075ae1e84a6d06054a402d0f3213c1") {
-					resp = ``
+				fmt.Printf("%v: %v\n", req.Method, req.URL.Path)
+				var content string
+				resp := http.Response{}
+				resp.StatusCode = 200
+				switch {
+				case strings.Contains(req.URL.Path, "search/code"):
+					content = tc.content
+				case strings.Contains(req.URL.Path, "git/refs/heads/master"):
+					content = `{"ref": "refs/heads/master","object": {"sha": "8613c69c7075ae1e84a6d06054a402d0f3213c1b"}}`
+				case strings.Contains(req.URL.Path, "git/trees"):
+					content = ``
+				case strings.Contains(req.URL.Path, "commits/8613c69c7075ae1e84a6d06054a402d0f3213c1"):
+					content = `{
+						"sha": "8613c69c7075ae1e84a6d06054a402d0f3213c1b",
+						"commit": {
+								"author": {
+										"name": "lildude",
+										"email": "lildood@gmail.com",
+										"date": "2018-10-21T16:48:02Z"
+								},
+								"committer": {
+										"name": "lildude",
+										"email": "lildood@gmail.com",
+										"date": "2018-10-21T16:48:02Z"
+								},
+								"message": "New note: 2018-10-12-55235.md",
+								"tree": {
+										"sha": "e1343d30894799dbaf4438d12d9862c0e48d1857",
+										"url": "https://api.github.com/repos/lildude/lildude.github.io/git/trees/e1343d30894799dbaf4438d12d9862c0e48d1857"
+								},
+								"url": "https://api.github.com/repos/lildude/lildude.github.io/git/commits/8613c69c7075ae1e84a6d06054a402d0f3213c1b",
+								"comment_count": 0,
+								"verification": {
+										"verified": false,
+										"reason": "unsigned",
+										"signature": null,
+										"payload": null
+								}
+						}
+					}`
 				}
-				*/
-				return &http.Response{
-					StatusCode: 200,
-					// Send response to be tested
-					Body: ioutil.NopCloser(strings.NewReader(resp)),
-				}
+				resp.Body = ioutil.NopCloser(strings.NewReader(content))
+
+				return &resp
 			})
 			gc := new(GithubClient)
 			gc.Client = httpClient
