@@ -190,7 +190,7 @@ func (gc *GithubClient) postToGithub(content string, postDate *time.Time, reposi
 
 	ref, _, err := client.Git.GetRef(ctx, s.GithubUser, repository, "refs/heads/master")
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return "", err
 	}
 
 	// Create a tree with what to commit.
@@ -198,13 +198,13 @@ func (gc *GithubClient) postToGithub(content string, postDate *time.Time, reposi
 	entries = append(entries, github.TreeEntry{Path: github.String("_posts/" + filename), Type: github.String("blob"), Content: github.String(string(content)), Mode: github.String("100644")})
 	tree, _, err := client.Git.CreateTree(ctx, s.GithubUser, repository, *ref.Object.SHA, entries)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return "", err
 	}
 	// createCommit creates the commit in the given reference using the given tree.
 	// Get the parent commit to attach the commit to.
 	parent, _, err := client.Repositories.GetCommit(ctx, s.GithubUser, repository, *ref.Object.SHA)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return "", err
 	}
 
 	// This is not always populated, but is needed.
@@ -216,15 +216,14 @@ func (gc *GithubClient) postToGithub(content string, postDate *time.Time, reposi
 	commit := &github.Commit{Author: author, Message: github.String("New note: " + filename), Tree: tree, Parents: []github.Commit{*parent.Commit}}
 	newCommit, _, err := client.Git.CreateCommit(ctx, s.GithubUser, repository, commit)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		return "", err
 	}
 
 	// Attach the commit to the master branch.
 	ref.Object.SHA = newCommit.SHA
 	_, _, err = client.Git.UpdateRef(ctx, s.GithubUser, repository, ref, false)
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		//return "", err
+		return "", err
 	}
 
 	return fmt.Sprintf("INFO: New post created: %s", filename), nil
