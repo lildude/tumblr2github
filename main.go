@@ -110,10 +110,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			cont, err := formatPost(content, &t, pt.Tags)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
+			cont := formatPost(content, &t, pt.Tags)
 			res, err := gc.postToGithub(cont, &t, getRepo(pt.Tags))
 			if err != nil {
 				log.Fatal(err.Error())
@@ -125,7 +122,7 @@ func main() {
 	}
 }
 
-func formatPost(content string, time *time.Time, tags []string) (res string, err error) {
+func formatPost(content string, time *time.Time, tags []string) (res string) {
 	c := blogPost{time.String(), tags, content}
 	fmtTmpl := `---
 layout: post
@@ -143,11 +140,9 @@ date: {{.Date}}
 	tmpl := template.Must(template.New("blogpost").Parse(fmtTmpl))
 
 	var out bytes.Buffer
-	if err := tmpl.Execute(&out, c); err != nil {
-		return "", err
-	}
+	tmpl.Execute(&out, c)
 
-	return out.String(), nil
+	return out.String()
 }
 
 func parseTextContent(content, format string) string {

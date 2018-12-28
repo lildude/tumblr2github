@@ -51,32 +51,26 @@ func Test_formatPost(t *testing.T) {
 		tags    []string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantRes string
-		wantErr bool
+		name string
+		args args
+		res  string
 	}{
 		{
-			name:    "simple text",
-			args:    args{"This is simple text", &timeStamp, tags},
-			wantRes: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is simple text\n",
-			wantErr: false,
+			name: "simple text",
+			args: args{"This is simple text", &timeStamp, tags},
+			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is simple text\n",
 		},
 		{
-			name:    "markdown text",
-			args:    args{"This is **markdown** text", &timeStamp, tags},
-			wantRes: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
+			name: "markdown text",
+			args: args{"This is **markdown** text", &timeStamp, tags},
+			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotRes, err := formatPost(tt.args.content, tt.args.time, tt.args.tags)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("formatPost() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotRes != tt.wantRes {
-				t.Errorf("\ngot:\n%v\n---:=====:---\n\nwant:\n%v", gotRes, tt.wantRes)
+			got := formatPost(tt.args.content, tt.args.time, tt.args.tags)
+			if got != tt.res {
+				t.Errorf("\ngot:\n%v\n---:=====:---\n\nwant:\n%v", got, tt.res)
 			}
 		})
 	}
