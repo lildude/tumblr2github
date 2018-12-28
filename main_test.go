@@ -9,160 +9,6 @@ import (
 	"time"
 )
 
-func TestGetRepo(t *testing.T) {
-	//t.Parallel()
-	testCases := []struct {
-		name     string
-		tags     []string
-		expected string
-	}{
-		{name: "no tags", tags: []string{}, expected: "colinseymour.co.uk"},
-		{name: "run", tags: []string{"foo", "run"}, expected: "gonefora.run"},
-		{name: "tech", tags: []string{"foo", "tech"}, expected: "lildude.co.uk"},
-		{name: "other", tags: []string{"foo", "boo"}, expected: "colinseymour.co.uk"},
-		{name: "tech and run", tags: []string{"tech", "run"}, expected: "lildude.co.uk"},
-		{name: "run and tech", tags: []string{"run", "tech"}, expected: "gonefora.run"},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			//t.Parallel()
-			repo := getRepo(tc.tags)
-			if repo != tc.expected {
-				t.Errorf("%v failed, got: %s, want: %s.", tc.name, repo, tc.expected)
-			}
-		})
-	}
-
-	s.GithubRepo = "lildude.github.io"
-	t.Run("settings override", func(t *testing.T) {
-		//t.Parallel()
-		repo := getRepo([]string{"foo", "run"})
-		if repo != s.GithubRepo {
-			t.Errorf("%v failed, got: %s, want: %s.", "settings override", repo, s.GithubRepo)
-		}
-	})
-}
-
-func TestCreateSlug(t *testing.T) {
-	//t.Parallel()
-	testCases := []struct {
-		name     string
-		expected string
-	}{
-		{name: "2010-01-04 01:02:03 UTC", expected: "2010-01-04-3723"},
-		{name: "1979-09-30 15:16:17 BST", expected: "1979-09-30-51377"},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			//t.Parallel()
-			timeLayout := "2006-01-02 15:04:05 MST"
-			time, _ := time.Parse(timeLayout, tc.name)
-			slug := createSlug(&time)
-			if slug != tc.expected {
-				t.Errorf("%v failed, got: %s, want: %s.", tc.name, slug, tc.expected)
-			}
-		})
-	}
-}
-
-func TestFormatPost(t *testing.T) {
-	//t.Parallel()
-	testCases := []struct {
-		name     string
-		date     string
-		content  string
-		expected string
-	}{
-		{
-			name:     "simple text",
-			date:     "2010-01-04 01:02:03 UTC",
-			content:  "This is simple text",
-			expected: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 2010-01-04 01:02:03 +0000 UTC\n---\n\nThis is simple text\n",
-		},
-		{
-			name:     "markdown text",
-			date:     "1979-09-30 15:16:17 BST",
-			content:  "This is **markdown** text",
-			expected: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			//t.Parallel()
-			timeLayout := "2006-01-02 15:04:05 MST"
-			time, _ := time.Parse(timeLayout, tc.date)
-			post, _ := formatPost(tc.content, &time, []string{"foo", "run"})
-			if post != tc.expected {
-				t.Errorf("%v failed, got: %s, want: %s.", tc.name, post, tc.expected)
-			}
-		})
-	}
-}
-
-func TestParseTextContent(t *testing.T) {
-	//t.Parallel()
-	testCases := []struct {
-		name     string
-		content  string
-		format   string
-		expected string
-	}{
-		{
-			name:     "text without html or markdown as html",
-			content:  "This is simple text",
-			format:   "html",
-			expected: "This is simple text",
-		},
-		{
-			name:     "text without html or markdown as markdown",
-			content:  "This is simple text",
-			format:   "markdown",
-			expected: "This is simple text",
-		},
-		{
-			name:     "text with html as html",
-			content:  "This is <b>simple</b> text",
-			format:   "html",
-			expected: "This is **simple** text",
-		},
-		{
-			name:     "text with html as markdown",
-			content:  "This is <b>simple</b> text",
-			format:   "markdown",
-			expected: "This is <b>simple</b> text",
-		},
-		{
-			name:     "text with markdown as html",
-			content:  "This is **simple** text",
-			format:   "html",
-			expected: "This is **simple** text",
-		},
-		{
-			name:     "text with markdown as markdown",
-			content:  "This is **simple** text",
-			format:   "markdown",
-			expected: "This is **simple** text",
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			//t.Parallel()
-			c := parseTextContent(tc.content, tc.format)
-			if c != tc.expected {
-				t.Errorf("%v failed, got: %s, want: %s.", tc.name, c, tc.expected)
-			}
-		})
-	}
-}
-
 // RoundTripFunc .
 type RoundTripFunc func(req *http.Request) *http.Response
 
@@ -178,45 +24,175 @@ func NewTestClient(fn RoundTripFunc) *http.Client {
 	}
 }
 
-func TestRepoHasPost(t *testing.T) {
+/*
+func Test_main(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			main()
+		})
+	}
+}
+*/
+
+func Test_formatPost(t *testing.T) {
 	//t.Parallel()
-	testCases := []struct {
-		name     string
-		content  string
-		expected bool
+	timeLayout := "2006-01-02 15:04:05 MST"
+	timeStamp, _ := time.Parse(timeLayout, "1979-09-30 15:16:17 BST")
+	tags := []string{"foo", "run"}
+
+	type args struct {
+		content string
+		time    *time.Time
+		tags    []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantRes string
+		wantErr bool
 	}{
 		{
-			name:     "text post does not exist",
-			content:  `{"total_count":0}`,
-			expected: false,
+			name:    "simple text",
+			args:    args{"This is simple text", &timeStamp, tags},
+			wantRes: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is simple text\n",
+			wantErr: false,
 		},
 		{
-			name:     "text post exists already",
-			content:  `{"total_count":1}`,
-			expected: true,
+			name:    "markdown text",
+			args:    args{"This is **markdown** text", &timeStamp, tags},
+			wantRes: "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
 		},
 	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			//t.Parallel()
-			httpClient := NewTestClient(func(req *http.Request) *http.Response {
-				return &http.Response{
-					StatusCode: 200,
-					// Send response to be tested
-					Body: ioutil.NopCloser(strings.NewReader(tc.content)),
-				}
-			})
-			gc := new(GithubClient)
-			gc.Client = httpClient
-			res := gc.repoHasPost("foo", "lildude.github.io")
-			if res != tc.expected {
-				t.Errorf("%v failed, got: %v, want: %v.", tc.name, res, tc.expected)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRes, err := formatPost(tt.args.content, tt.args.time, tt.args.tags)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("formatPost() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotRes != tt.wantRes {
+				t.Errorf("\ngot:\n%v\n---:=====:---\n\nwant:\n%v", gotRes, tt.wantRes)
 			}
 		})
 	}
 }
+
+func Test_parseTextContent(t *testing.T) {
+	type args struct {
+		content string
+		format  string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "text without html or markdown as html",
+			args: args{"This is simple text", "html"},
+			want: "This is simple text",
+		},
+		{
+			name: "text without html or markdown as markdown",
+			args: args{"This is simple text", "markdown"},
+			want: "This is simple text",
+		},
+		{
+			name: "text with html as html",
+			args: args{"This is <b>simple</b> text", "html"},
+			want: "This is **simple** text",
+		},
+		{
+			name: "text with html as markdown",
+			args: args{"This is <b>simple</b> text", "markdown"},
+			want: "This is <b>simple</b> text",
+		},
+		{
+			name: "text with markdown as html",
+			args: args{"This is **simple** text", "html"},
+			want: "This is **simple** text",
+		},
+		{
+			name: "text with markdown as markdown",
+			args: args{"This is **simple** text", "markdown"},
+			want: "This is **simple** text",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseTextContent(tt.args.content, tt.args.format); got != tt.want {
+				t.Errorf("parseTextContent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+func TestGithubClient_newGitHubClient(t *testing.T) {
+	type fields struct {
+		Client *http.Client
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   *github.Client
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gc := &GithubClient{
+				Client: tt.fields.Client,
+			}
+			if got := gc.newGitHubClient(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GithubClient.newGitHubClient() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+*/
+
+/*
+func TestGithubClient_postToGithub(t *testing.T) {
+	type fields struct {
+		Client *http.Client
+	}
+	type args struct {
+		content    string
+		postDate   *time.Time
+		repository string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantRes string
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gc := &GithubClient{
+				Client: tt.fields.Client,
+			}
+			gotRes, err := gc.postToGithub(tt.args.content, tt.args.postDate, tt.args.repository)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GithubClient.postToGithub() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotRes != tt.wantRes {
+				t.Errorf("GithubClient.postToGithub() = %v, want %v", gotRes, tt.wantRes)
+			}
+		})
+	}
+}
+*/
 
 func TestPostToGithub(t *testing.T) {
 	//t.Parallel()
@@ -301,10 +277,131 @@ func TestPostToGithub(t *testing.T) {
 }
 
 /*
-func TestFormatPostFailure(t *testing.T) {
+func TestGithubClient_repoHasPost(t *testing.T) {
+	type fields struct {
+		Client *http.Client
+	}
+	type args struct {
+		filename string
+		repo     string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gc := &GithubClient{
+				Client: tt.fields.Client,
+			}
+			if got := gc.repoHasPost(tt.args.filename, tt.args.repo); got != tt.want {
+				t.Errorf("GithubClient.repoHasPost() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+*/
+func TestRepoHasPost(t *testing.T) {
+	//t.Parallel()
+	testCases := []struct {
+		name     string
+		content  string
+		expected bool
+	}{
+		{
+			name:     "text post does not exist",
+			content:  `{"total_count":0}`,
+			expected: false,
+		},
+		{
+			name:     "text post exists already",
+			content:  `{"total_count":1}`,
+			expected: true,
+		},
+	}
 
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			//t.Parallel()
+			httpClient := NewTestClient(func(req *http.Request) *http.Response {
+				return &http.Response{
+					StatusCode: 200,
+					// Send response to be tested
+					Body: ioutil.NopCloser(strings.NewReader(tc.content)),
+				}
+			})
+			gc := new(GithubClient)
+			gc.Client = httpClient
+			res := gc.repoHasPost("foo", "lildude.github.io")
+			if res != tc.expected {
+				t.Errorf("%v failed, got: %v, want: %v.", tc.name, res, tc.expected)
+			}
+		})
+	}
 }
 
+func Test_createSlug(t *testing.T) {
+	timeLayout := "2006-01-02 15:04:05 MST"
+	timeStamp, _ := time.Parse(timeLayout, "2010-01-04 01:02:03 UTC")
 
+	type args struct {
+		t *time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "slug for 2010-01-04 01:02:03 UTC",
+			args: args{&timeStamp},
+			want: "2010-01-04-3723",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := createSlug(tt.args.t); got != tt.want {
+				t.Errorf("createSlug() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
 
-*/
+func Test_getRepo(t *testing.T) {
+	type args struct {
+		tags []string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{name: "no tags", args: args{[]string{}}, want: "colinseymour.co.uk"},
+		{name: "run", args: args{[]string{"foo", "run"}}, want: "gonefora.run"},
+		{name: "tech", args: args{[]string{"foo", "tech"}}, want: "lildude.co.uk"},
+		{name: "other", args: args{[]string{"foo", "boo"}}, want: "colinseymour.co.uk"},
+		{name: "tech and run", args: args{[]string{"tech", "run"}}, want: "lildude.co.uk"},
+		{name: "run and tech", args: args{[]string{"run", "tech"}}, want: "gonefora.run"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getRepo(tt.args.tags); got != tt.want {
+				t.Errorf("getRepo() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
+	s.GithubRepo = "lildude.github.io"
+	t.Run("settings override", func(t *testing.T) {
+		//t.Parallel()
+		repo := getRepo([]string{"foo", "run"})
+		if repo != s.GithubRepo {
+			t.Errorf("%v failed, got: %s, want: %s.", "settings override", repo, s.GithubRepo)
+		}
+	})
+}
