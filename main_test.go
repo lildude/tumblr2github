@@ -77,49 +77,50 @@ func Test_formatPost(t *testing.T) {
 }
 
 func Test_parseTextContent(t *testing.T) {
-	type args struct {
-		content string
-		format  string
-	}
 	tests := []struct {
-		name string
-		args args
-		want string
+		name    string
+		content string
+		want    string
 	}{
 		{
-			name: "text without html or markdown as html",
-			args: args{"This is simple text", "html"},
-			want: "This is simple text",
+			name:    "text without html or markdown as html",
+			content: "This is simple text",
+			want:    "This is simple text",
 		},
 		{
-			name: "text without html or markdown as markdown",
-			args: args{"This is simple text", "markdown"},
-			want: "This is simple text",
+			name:    "text without html or markdown as markdown",
+			content: "This is simple text",
+			want:    "This is simple text",
 		},
 		{
-			name: "text with html as html",
-			args: args{"This is <b>simple</b> text", "html"},
-			want: "This is **simple** text",
+			name:    "text with html as html",
+			content: "This is <b>simple</b> text",
+			want:    "This is **simple** text",
 		},
 		{
-			name: "text with html as markdown",
-			args: args{"This is <b>simple</b> text", "markdown"},
-			want: "This is <b>simple</b> text",
+			name:    "text with html as markdown",
+			content: "This is <b>simple</b> text",
+			want:    "This is **simple** text",
 		},
 		{
-			name: "text with markdown as html",
-			args: args{"This is **simple** text", "html"},
-			want: "This is **simple** text",
+			name:    "text with markdown as html",
+			content: "This is **simple** text",
+			want:    "This is **simple** text",
 		},
 		{
-			name: "text with markdown as markdown",
-			args: args{"This is **simple** text", "markdown"},
-			want: "This is **simple** text",
+			name:    "text with markdown as markdown",
+			content: "This is **simple** text",
+			want:    "This is **simple** text",
+		},
+		{
+			name:    "text with markdown wrapped in html",
+			content: "<p>This is **simple** text</p>",
+			want:    "This is **simple** text",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseTextContent(tt.args.content, tt.args.format); got != tt.want {
+			if got := parseTextContent(tt.content); got != tt.want {
 				t.Errorf("parseTextContent() = %v, want %v", got, tt.want)
 			}
 		})

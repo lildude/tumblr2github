@@ -103,8 +103,8 @@ func main() {
 		case *tumblr.QuotePost:
 			fmt.Printf("quote   %d %v %v\n", pt.Id, pt.Source, pt.Tags)
 		case *tumblr.TextPost:
-			content := parseTextContent(pt.Trail[0].ContentRaw, pt.Format)
-			fmt.Printf("INFO: text   %d %v %v %v\n", pt.Id, pt.Format, content, pt.Tags)
+			content := parseTextContent(pt.Trail[0].ContentRaw)
+			fmt.Printf("INFO: text   %d %v %v\n", pt.Id, content, pt.Tags)
 			timeLayout := "2006-01-02 15:04:05 MST"
 			t, err := time.Parse(timeLayout, pt.Date)
 			if err != nil {
@@ -145,7 +145,7 @@ date: {{.Date}}
 	return out.String()
 }
 
-func parseTextContent(content, format string) string {
+func parseTextContent(content string) string {
 	// If the content contains `data-npf`, it means it's got an embedded link, so lets treat it like we'd like to treat a link post.
 	// Interestingly, creating a link post from mobile actually creates a text post. Web creates a link post.
 	re := regexp.MustCompile("data-npf='({.*})'")
@@ -157,9 +157,7 @@ func parseTextContent(content, format string) string {
 		fmt.Println(ld.URL)
 	}
 
-	if format == "html" {
-		content = html2md.Convert(content)
-	}
+	content = html2md.Convert(content)
 
 	return content
 }
