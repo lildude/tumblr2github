@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
 	"text/template"
@@ -58,6 +59,10 @@ type blogPost struct {
 	Content string
 }
 
+type GithubClient struct {
+	Client *http.Client
+}
+
 var s Settings
 var client *github.Client
 var ctx = context.Background()
@@ -77,37 +82,36 @@ func main() {
 
 	params := url.Values{}
 	params.Add("filter", "raw")
-	params.Add("limit", "1")
+	params.Add("limit", "5")
 
 	posts, err := tumblr.GetPosts(cl, s.BlogID, params)
 	if err != nil {
 		fmt.Printf("%v\n", err)
+		fmt.Printf("%v\n", posts)
 	}
 
+	gc := new(GithubClient)
 	allPosts, _ := posts.All()
 	for _, post := range allPosts {
 		//fmt.Printf("%v\n", post)
 
 		switch pt := post.(type) {
 		case *tumblr.LinkPost:
-			fmt.Printf("link   %d %v %v\n", pt.Id, pt.Url, pt.Tags)
+			fmt.Printf("INFO: link   %d %v %v\n", pt.Id, pt.Url, pt.Tags)
 		case *tumblr.PhotoPost:
-			fmt.Printf("photo   %d %v %v\n", pt.Id, pt.ImagePermalink, pt.Tags)
+			fmt.Printf("INFO: photo   %d %v %v\n", pt.Id, pt.ImagePermalink, pt.Tags)
 		case *tumblr.QuotePost:
-			fmt.Printf("quote   %d %v %v\n", pt.Id, pt.Source, pt.Tags)
+			fmt.Printf("INFO: quote   %d %v %v\n", pt.Id, pt.Source, pt.Tags)
 		case *tumblr.TextPost:
-			content := parseTextContent(pt.Trail[0].ContentRaw, pt.Format)
-			fmt.Printf("INFO: text   %d %v %v %v\n", pt.Id, pt.Format, content, pt.Tags)
+			content := parseTextContent(pt.Trail[0].ContentRaw)
+			fmt.Printf("INFO: text   %d %v %v\n", pt.Id, content, pt.Tags)
 			timeLayout := "2006-01-02 15:04:05 MST"
 			t, err := time.Parse(timeLayout, pt.Date)
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			cont, err := formatPost(content, &t, pt.Tags)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			res, err := postToGithub(cont, &t, getRepo(pt.Tags))
+			cont := formatPost(content, &t, pt.Tags)
+			res, err := gc.postToGithub(cont, &t, getRepo(pt.Tags))
 			if err != nil {
 				log.Fatal(err.Error())
 			}
@@ -118,8 +122,8 @@ func main() {
 	}
 }
 
-func formatPost(content string, time *time.Time, tags []string) (res string, err error) {
-	c := blogPost{time.String(), tags, content}
+func formatPost(content string, time *time.Time, tags []string) (res string) {
+	c := blogPost{time.Format("2006-01-02 15:04:05 -0700"), tags, content}
 	fmtTmpl := `---
 layout: post
 {{- if .Tags }}
@@ -136,14 +140,12 @@ date: {{.Date}}
 	tmpl := template.Must(template.New("blogpost").Parse(fmtTmpl))
 
 	var out bytes.Buffer
-	if err := tmpl.Execute(&out, c); err != nil {
-		return "", err
-	}
+	tmpl.Execute(&out, c)
 
-	return out.String(), nil
+	return out.String()
 }
 
-func parseTextContent(content, format string) string {
+func parseTextContent(content string) string {
 	// If the content contains `data-npf`, it means it's got an embedded link, so lets treat it like we'd like to treat a link post.
 	// Interestingly, creating a link post from mobile actually creates a text post. Web creates a link post.
 	re := regexp.MustCompile("data-npf='({.*})'")
@@ -155,22 +157,27 @@ func parseTextContent(content, format string) string {
 		fmt.Println(ld.URL)
 	}
 
-	if format == "html" {
-		content = html2md.Convert(content)
-	}
+	content = html2md.Convert(content)
 
 	return content
 }
 
-func postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
-	tc := oauth2.NewClient(ctx, ts)
-	client = github.NewClient(tc)
+func (gc *GithubClient) newGitHubClient() *github.Client {
+	tc := gc.Client
+	if gc.Client == nil {
+		ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: s.GithubToken})
+		tc = oauth2.NewClient(ctx, ts)
+	}
+	return github.NewClient(tc)
+}
+
+func (gc *GithubClient) postToGithub(content string, postDate *time.Time, repository string) (res string, err error) {
+	client := gc.newGitHubClient()
 
 	filename := fmt.Sprintf("%s.md", createSlug(postDate))
 
 	// Bail early if the post already exists.
-	if repoHasPost(filename, repository) {
+	if gc.repoHasPost(filename, repository) {
 		return "INFO: Post already exists. Nothing to do.", nil
 	}
 
@@ -183,7 +190,9 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 	entries := []github.TreeEntry{}
 	entries = append(entries, github.TreeEntry{Path: github.String("_posts/" + filename), Type: github.String("blob"), Content: github.String(string(content)), Mode: github.String("100644")})
 	tree, _, err := client.Git.CreateTree(ctx, s.GithubUser, repository, *ref.Object.SHA, entries)
-
+	if err != nil {
+		return "", err
+	}
 	// createCommit creates the commit in the given reference using the given tree.
 	// Get the parent commit to attach the commit to.
 	parent, _, err := client.Repositories.GetCommit(ctx, s.GithubUser, repository, *ref.Object.SHA)
@@ -213,10 +222,14 @@ func postToGithub(content string, postDate *time.Time, repository string) (res s
 	return fmt.Sprintf("INFO: New post created: %s", filename), nil
 }
 
-func repoHasPost(filename string, repo string) bool {
+func (gc *GithubClient) repoHasPost(filename string, repo string) bool {
+	client := gc.newGitHubClient()
 	query := fmt.Sprintf("filename:%s repo:%s/%s path:_posts", filename, s.GithubUser, repo)
 	opts := &github.SearchOptions{Sort: "forks", Order: "desc"}
-	res, _, _ := client.Search.Code(ctx, query, opts)
+	res, _, err := client.Search.Code(ctx, query, opts)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
 	if res.GetTotal() > 0 {
 		return true
 	}
