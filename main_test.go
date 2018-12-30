@@ -58,12 +58,12 @@ func Test_formatPost(t *testing.T) {
 		{
 			name: "simple text",
 			args: args{"This is simple text", &timeStamp, tags},
-			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is simple text\n",
+			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100\n---\n\nThis is simple text\n",
 		},
 		{
 			name: "markdown text",
 			args: args{"This is **markdown** text", &timeStamp, tags},
-			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100 BST\n---\n\nThis is **markdown** text\n",
+			res:  "---\nlayout: post\ntags:\n- foo\n- run\ndate: 1979-09-30 15:16:17 +0100\n---\n\nThis is **markdown** text\n",
 		},
 	}
 	for _, tt := range tests {
@@ -136,7 +136,16 @@ func TestGithubClient_newGitHubClient(t *testing.T) {
 		fields fields
 		want   *github.Client
 	}{
-		// TODO: Add test cases.
+		{
+			name:   "standard github client without auth",
+			fields: fields{nil},
+			want:   &github.Client{},
+		},
+		{
+			name:   "standard github client with auth",
+			fields: fields{nil},
+			want:   &github.Client{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -257,8 +266,9 @@ func TestPostToGithub(t *testing.T) {
 
 				return &resp
 			})
-			gc := new(GithubClient)
-			gc.Client = httpClient
+			gc := &GithubClient{
+				Client: httpClient,
+			}
 			s.GithubUser = "lildude"
 			timeLayout := "2006-01-02 15:04:05 MST"
 			time, _ := time.Parse(timeLayout, "2010-01-04 01:02:03 UTC")

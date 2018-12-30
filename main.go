@@ -123,7 +123,7 @@ func main() {
 }
 
 func formatPost(content string, time *time.Time, tags []string) (res string) {
-	c := blogPost{time.String(), tags, content}
+	c := blogPost{time.Format("2006-01-02 15:04:05 -0700"), tags, content}
 	fmtTmpl := `---
 layout: post
 {{- if .Tags }}
