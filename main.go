@@ -82,7 +82,7 @@ func main() {
 
 	params := url.Values{}
 	params.Add("filter", "raw")
-	params.Add("limit", "1")
+	params.Add("limit", "5")
 
 	posts, err := tumblr.GetPosts(cl, s.BlogID, params)
 	if err != nil {
@@ -97,11 +97,11 @@ func main() {
 
 		switch pt := post.(type) {
 		case *tumblr.LinkPost:
-			fmt.Printf("link   %d %v %v\n", pt.Id, pt.Url, pt.Tags)
+			fmt.Printf("INFO: link   %d %v %v\n", pt.Id, pt.Url, pt.Tags)
 		case *tumblr.PhotoPost:
-			fmt.Printf("photo   %d %v %v\n", pt.Id, pt.ImagePermalink, pt.Tags)
+			fmt.Printf("INFO: photo   %d %v %v\n", pt.Id, pt.ImagePermalink, pt.Tags)
 		case *tumblr.QuotePost:
-			fmt.Printf("quote   %d %v %v\n", pt.Id, pt.Source, pt.Tags)
+			fmt.Printf("INFO: quote   %d %v %v\n", pt.Id, pt.Source, pt.Tags)
 		case *tumblr.TextPost:
 			content := parseTextContent(pt.Trail[0].ContentRaw)
 			fmt.Printf("INFO: text   %d %v %v\n", pt.Id, content, pt.Tags)
